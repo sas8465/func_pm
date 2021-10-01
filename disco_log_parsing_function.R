@@ -30,7 +30,3 @@ parse_log <- function(file, output_file_name) {
   write.csv(dfSubset, output_file_name, row.names=FALSE, quote=FALSE) 
   
 }
-
-
-parse_log("P2_disco.log", "P2_disco_clean.csv")
-
