@@ -2,8 +2,10 @@ library(readr)
 library(stringr)
 library(tidyverse)
 library(lubridate)
+library(tm)
+library(glue)
 
-parse_prom <- function(input_path, output_path) {
+parse_prom <- function(input_path, output_path, start_time) {
 
   log <- read.csv(file = input_path, sep = "\n", header = F, fileEncoding = "UTF-16LE", encoding = "UTF-8")
   
@@ -33,6 +35,22 @@ parse_prom <- function(input_path, output_path) {
   time_df <- data.frame(dfSubset$Time)
   dfSubset$Time2 <- modified_dates
   
+  #Delete First two plugins:
+  
+  dfSubset = dfSubset[-1:-2,]
+  
+  #Delete "Start Plug-in" & "End Plug-in" Parts:
+  
+  stopwords = c("Start plug-in", "End plug-in")
+  
+  #stopwords = readLines('stopwords.txt')     #Your stop words file
+  x  = dfSubset$Task        #Company column data
+  x  =  removeWords(x,stopwords)     #Remove stopwords
+  x  =  gsub("@2", "", x, ignore.case = TRUE)
+  
+  dfSubset$Task <- trimws(x)     #Add the list as new column and check
+  
+  
   #Personal Difference Function to handle times:
   
   mydiff <- function(data, diff){
@@ -43,7 +61,7 @@ parse_prom <- function(input_path, output_path) {
   
   dfSubset$Standard_Time_Difference <- dfSubset$Time_Differences * 1000
   
-  dfSubset$Time_Stamps <- dfSubset$Standard_Time_Difference + 10000
+  dfSubset$Time_Stamps <- dfSubset$Standard_Time_Difference + start_time
   
   for (i in 2:nrow(dfSubset)) {
     
@@ -51,17 +69,38 @@ parse_prom <- function(input_path, output_path) {
     
   }
   
-  List = list()
+  #List for Coding Section
+  
+  List1 = list()
+  
+  searchString <- c(' ')
+  replacementString <- ''
   
   for (i in seq(1, nrow(dfSubset),2) ) {
     
-    phrase <- glue('<VideoSelection end="{dfSubset$Time_Stamps[i+1]}" name="({dfSubset$Time_Stamps[i]},0),({dfSubset$Time_Stamps[i+1]},0)" creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" begin="{dfSubset$Time_Stamps[i]}" guid="5FB6E502-B2A2-459C-B8F7-C3E17A3A2F87">
+    phrase1 <- glue('<Code isCodable="true" name="{dfSubset$Task[i]}" color="#2364a2" guid="{str_replace_all(dfSubset$Task[i], fixed(" "), "")}"/>')
+    
+    List1[[length(List1)+1]] = phrase1
+    
+  }
+  
+  #Removing DUplicates from a List:
+  
+  List1 = List1[!duplicated(List1)]
+  
+  #List for Video Selection
+  
+  List2 = list()
+  
+  for (i in seq(1, nrow(dfSubset),2) ) {
+    
+    phrase2 <- glue('<VideoSelection end="{dfSubset$Time_Stamps[i+1]}" name="({dfSubset$Time_Stamps[i]},0),({dfSubset$Time_Stamps[i+1]},0)" creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" begin="{dfSubset$Time_Stamps[i]}" guid="5FB6E502-B2A2-459C-B8F7-C3E17A3A2F87">
     <Coding creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" guid="E9CABA1A-0832-47CE-BD66-A8EC188D37FD">
-    <CodeRef targetGUID="plugin"/>
+    <CodeRef targetGUID="{str_replace_all(dfSubset$Task[i], fixed(" "), "")}"/>
     </Coding>
     </VideoSelection>')
     
-    List[[length(List)+1]] = phrase
+    List2[[length(List2)+1]] = phrase2
     
   }
   
@@ -72,13 +111,14 @@ parse_prom <- function(input_path, output_path) {
   line5 <- '</Users>'  
   line6 <- '<CodeBook>'
   line7 <- '<Codes>'
-  line8 <- '<Code isCodable="true" name="Start and End Plugin" color="#2364a2" guid="plugin"/>'
+  #line8 <- '<Code isCodable="true" name="Start and End Plugin" color="#2364a2" guid="plugin"/>'
+  line8 <- paste(unlist(List1), collapse='', sep = '\n')
   line9 <- '</Codes>'
   line10 <- '</CodeBook>'
   line11 <- '<Sources>'
   line12 <- '<VideoSource name="P19" creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" path="internal://P19.mp4" guid="46ACDB89-832F-4998-A542-D579FCBE8F1F">'
   #line13 <- '<VideoSelection end="{dfSubset$Time_Stamps[i+1]}" name="({dfSubset$Time_Stamps[i]},0),({dfSubset$Time_Stamps[i+1]},0)" creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" begin="{dfSubset$Time_Stamps[i]}" guid="5FB6E502-B2A2-459C-B8F7-C3E17A3A2F87"> <Coding creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" guid="E9CABA1A-0832-47CE-BD66-A8EC188D37FD"> <CodeRef targetGUID="plugin"/> </Coding> </VideoSelection>'
-  line13 <- paste( unlist(List), collapse='', sep = '/n')
+  line13 <- paste(unlist(List2), collapse='', sep = '/n')
   line14 <- '</VideoSource>'
   line15 <- '</Sources>'
   line16 <- '</Project>'
@@ -111,5 +151,12 @@ parse_prom <- function(input_path, output_path) {
 
 }
 
-##Example Use:
-#parse_prom('C:/Users/leal0/OneDrive/Desktop/Documents/St. Gallen/Process Mining Job/Parsing Logs/P19_prom.log', 'C:/Users/leal0/OneDrive/Desktop/Documents/St. Gallen/Process Mining Job/Parsing Logs/output.txt')
+
+##Example Use
+
+#input_path = 'C:/Users/leal0/OneDrive/Desktop/Documents/St. Gallen/Process Mining Job/Parsing Logs/P21_prom.log'
+
+#output_path = 'C:/Users/leal0/OneDrive/Desktop/Documents/St. Gallen/Process Mining Job/Parsing Logs/output_P21.txt'
+
+#parse_prom(input_path, output_path, 291500)
+
