@@ -5,9 +5,20 @@ library(lubridate)
 library(tm)
 library(glue)
 
-parse_prom <- function(input_path, output_path, start_time, video_number) {
+parse_prom <- function(input_path, output_path, start_time, video_title) {
+  
+  ###This function converts PROM log to MAXQDA coding scheme.###
+  
+  #input_path <- path to disco log file.
+  #output_path <- path to output location. File name will be 
+  #start_time <- start time when user uses first widget (units = seconds * 1000)
+  #video_title <-title of video being encoded (with .mp4 extension)
 
+  ### Load Log: ###
+  
   log <- read.csv(file = input_path, sep = "\n", header = F, fileEncoding = "UTF-16LE", encoding = "UTF-8")
+  
+  #Convert Log to DataFrame & Clean up Formatting 
   
   split_log <- str_split_fixed(log$V1, "\\+02:00:", 2)
   
@@ -22,12 +33,12 @@ parse_prom <- function(input_path, output_path, start_time, video_number) {
   names(df)[1] <- "Time"
   names(df)[2] <- "Task"
   
-  #Subsetting
+  #Subsetting log to only get desired codes and time stamps:
   
   dfSubset <- df[grep("plug-in", df$Task), ]
   head(dfSubset)
   
-  #Manipulating Time
+  #Converting Standard time to unit (seconds * 1000) used by MAXQDA:
   
   dfSubset$Time[1]
   modified_dates <- ymd_hms(dfSubset$Time)
@@ -39,9 +50,9 @@ parse_prom <- function(input_path, output_path, start_time, video_number) {
   
   #Delete First two plugins:
   
-  dfSubset = dfSubset[-1:-2,]
+  dfSubset = dfSubset[-1:-2,] #Delete first two because that is when program is waiting for user to start.
   
-  #Delete "Start Plug-in" & "End Plug-in" Parts:
+  #Cleaning up coded:
   
   stopwords = c("Start plug-in", "End plug-in")
   
@@ -56,6 +67,7 @@ parse_prom <- function(input_path, output_path, start_time, video_number) {
   #Personal Difference Function to handle times:
   
   mydiff <- function(data, diff){
+    #Difference Function to differentiate times between tasks
     c(rep(0, diff), diff(data, lag = diff))
   }
   
@@ -70,6 +82,8 @@ parse_prom <- function(input_path, output_path, start_time, video_number) {
     dfSubset$Time_Stamps[i] <-  round(dfSubset$Standard_Time_Difference[i] + dfSubset$Time_Stamps[i-1], digits=0)
     
   }
+  
+  ### Convert Log to MAXQDA Coding Scheme ###
   
   #List for Coding Section
   
@@ -113,18 +127,17 @@ parse_prom <- function(input_path, output_path, start_time, video_number) {
   line5 <- '</Users>'  
   line6 <- '<CodeBook>'
   line7 <- '<Codes>'
-  #line8 <- '<Code isCodable="true" name="Start and End Plugin" color="#2364a2" guid="plugin"/>'
   line8 <- paste(unlist(List1), collapse='', sep = '\n')
   line9 <- '</Codes>'
   line10 <- '</CodeBook>'
   line11 <- '<Sources>'
-  line12 <- glue('<VideoSource name="P{video_number}" creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" path="internal://P{video_number}.mp4" guid="46ACDB89-832F-4998-A542-D579FCBE8F1F">')
-  #line13 <- '<VideoSelection end="{dfSubset$Time_Stamps[i+1]}" name="({dfSubset$Time_Stamps[i]},0),({dfSubset$Time_Stamps[i+1]},0)" creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" begin="{dfSubset$Time_Stamps[i]}" guid="5FB6E502-B2A2-459C-B8F7-C3E17A3A2F87"> <Coding creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" guid="E9CABA1A-0832-47CE-BD66-A8EC188D37FD"> <CodeRef targetGUID="plugin"/> </Coding> </VideoSelection>'
+  line12 <- glue('<VideoSource name="{video_title}" creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" path="internal://{video_title}" guid="46ACDB89-832F-4998-A542-D579FCBE8F1F">')
   line13 <- paste(unlist(List2), collapse='', sep = '/n')
   line14 <- '</VideoSource>'
   line15 <- '</Sources>'
   line16 <- '</Project>'
   
+  #Join lines together:
   
   addr <- paste(line1,
                 line2, 
@@ -145,19 +158,23 @@ parse_prom <- function(input_path, output_path, start_time, video_number) {
                 sep="\n"
   )
   
-  cat(addr[1])
+  cat(addr[1]) #test print of all lines to ensure they are correct.
+  
+  #Output results to file. 
   
   fileConn<-file(output_path)
   writeLines(addr, fileConn)
   close(fileConn)
-
+  
 }
 
 
 ##Example Use
 
 #input_path = 'C:/Users/leal0/OneDrive/Desktop/Documents/St. Gallen/Process Mining Job/Parsing Logs/P21_prom.log'
-
 #output_path = 'C:/Users/leal0/OneDrive/Desktop/Documents/St. Gallen/Process Mining Job/Parsing Logs/output_P21.txt'
+#start_time = 291500
+#video_title = 'P19.mp4'
 
-#parse_prom(input_path, output_path, 291500, 19)
+#parse_prom(input_path, output_path, start_time, video_title)
+
