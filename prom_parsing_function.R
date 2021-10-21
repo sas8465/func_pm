@@ -5,7 +5,7 @@ library(lubridate)
 library(tm)
 library(glue)
 
-parse_prom <- function(input_path, output_path, start_time) {
+parse_prom <- function(input_path, output_path, start_time, video_number) {
 
   log <- read.csv(file = input_path, sep = "\n", header = F, fileEncoding = "UTF-16LE", encoding = "UTF-8")
   
@@ -26,6 +26,8 @@ parse_prom <- function(input_path, output_path, start_time) {
   
   dfSubset <- df[grep("plug-in", df$Task), ]
   head(dfSubset)
+  
+  #Manipulating Time
   
   dfSubset$Time[1]
   modified_dates <- ymd_hms(dfSubset$Time)
@@ -116,7 +118,7 @@ parse_prom <- function(input_path, output_path, start_time) {
   line9 <- '</Codes>'
   line10 <- '</CodeBook>'
   line11 <- '<Sources>'
-  line12 <- '<VideoSource name="P19" creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" path="internal://P19.mp4" guid="46ACDB89-832F-4998-A542-D579FCBE8F1F">'
+  line12 <- glue('<VideoSource name="P{video_number}" creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" path="internal://P{video_number}.mp4" guid="46ACDB89-832F-4998-A542-D579FCBE8F1F">')
   #line13 <- '<VideoSelection end="{dfSubset$Time_Stamps[i+1]}" name="({dfSubset$Time_Stamps[i]},0),({dfSubset$Time_Stamps[i+1]},0)" creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" begin="{dfSubset$Time_Stamps[i]}" guid="5FB6E502-B2A2-459C-B8F7-C3E17A3A2F87"> <Coding creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" guid="E9CABA1A-0832-47CE-BD66-A8EC188D37FD"> <CodeRef targetGUID="plugin"/> </Coding> </VideoSelection>'
   line13 <- paste(unlist(List2), collapse='', sep = '/n')
   line14 <- '</VideoSource>'
@@ -158,5 +160,4 @@ parse_prom <- function(input_path, output_path, start_time) {
 
 #output_path = 'C:/Users/leal0/OneDrive/Desktop/Documents/St. Gallen/Process Mining Job/Parsing Logs/output_P21.txt'
 
-#parse_prom(input_path, output_path, 291500)
-
+#parse_prom(input_path, output_path, 291500, 19)
