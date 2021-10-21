@@ -5,8 +5,8 @@ library(lubridate)
 library(tm)
 library(glue)
 
-parse_prom <- function(input_path, output_path, start_time, video_number) {
-
+parse_disco <- function(input_path, output_path, start_time, video_number, standard_time_lag) {
+ 
   log <- read.csv(file = input_path, sep = "\n", header = F, fileEncoding = "UTF-16LE", encoding = "UTF-8")
   
   split_log <- str_split_fixed(log$V1, "\\+02:00:", 2)
@@ -24,7 +24,7 @@ parse_prom <- function(input_path, output_path, start_time, video_number) {
   
   #Subsetting
   
-  dfSubset <- df[grep("plug-in", df$Task), ]
+  dfSubset <- df[grep("Showing", df$Task), ]
   head(dfSubset)
   
   #Manipulating Time
@@ -37,21 +37,25 @@ parse_prom <- function(input_path, output_path, start_time, video_number) {
   time_df <- data.frame(dfSubset$Time)
   dfSubset$Time2 <- modified_dates
   
-  #Delete First two plugins:
+  #Delete first view because that is when model is weighting
   
-  dfSubset = dfSubset[-1:-2,]
+  dfSubset = dfSubset[0:-1,]
   
-  #Delete "Start Plug-in" & "End Plug-in" Parts:
+  #Delete "Parentheses" Parts:
   
-  stopwords = c("Start plug-in", "End plug-in")
+  #stopwords = c("(", ")")
   
-  #stopwords = readLines('stopwords.txt')     #Your stop words file
   x  = dfSubset$Task        #Company column data
-  x  =  removeWords(x,stopwords)     #Remove stopwords
-  x  =  gsub("@2", "", x, ignore.case = TRUE)
+  #x  =  removeWords(x,stopwords)     #Remove stopwords
+  #x  =  gsub("()", "", x, ignore.case = TRUE)
   
-  dfSubset$Task <- trimws(x)     #Add the list as new column and check
+  #dfSubset$Task <- trimws(x)     #Add the list as new column and check
   
+  #gsub("[()]","",dfSubset$Task)
+  
+  dfSubset$Task <- str_replace_all(string = x,
+                                   pattern = "[\\*\\(\\)]",
+                                   replacement = "")
   
   #Personal Difference Function to handle times:
   
@@ -71,6 +75,7 @@ parse_prom <- function(input_path, output_path, start_time, video_number) {
     
   }
   
+  
   #List for Coding Section
   
   List1 = list()
@@ -78,7 +83,7 @@ parse_prom <- function(input_path, output_path, start_time, video_number) {
   searchString <- c(' ')
   replacementString <- ''
   
-  for (i in seq(1, nrow(dfSubset),2) ) {
+  for (i in seq(1, nrow(dfSubset),1) ) {
     
     phrase1 <- glue('<Code isCodable="true" name="{dfSubset$Task[i]}" color="#2364a2" guid="{str_replace_all(dfSubset$Task[i], fixed(" "), "")}"/>')
     
@@ -94,9 +99,9 @@ parse_prom <- function(input_path, output_path, start_time, video_number) {
   
   List2 = list()
   
-  for (i in seq(1, nrow(dfSubset),2) ) {
+  for (i in seq(1, nrow(dfSubset),1) ) {
     
-    phrase2 <- glue('<VideoSelection end="{dfSubset$Time_Stamps[i+1]}" name="({dfSubset$Time_Stamps[i]},0),({dfSubset$Time_Stamps[i+1]},0)" creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" begin="{dfSubset$Time_Stamps[i]}" guid="5FB6E502-B2A2-459C-B8F7-C3E17A3A2F87">
+    phrase2 <- glue('<VideoSelection end="{dfSubset$Time_Stamps[i]+standard_time_lag}" name="({dfSubset$Time_Stamps[i]},0),({dfSubset$Time_Stamps[i]+standard_time_lag},0)" creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" begin="{dfSubset$Time_Stamps[i]}" guid="5FB6E502-B2A2-459C-B8F7-C3E17A3A2F87">
     <Coding creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" guid="E9CABA1A-0832-47CE-BD66-A8EC188D37FD">
     <CodeRef targetGUID="{str_replace_all(dfSubset$Task[i], fixed(" "), "")}"/>
     </Coding>
@@ -150,14 +155,6 @@ parse_prom <- function(input_path, output_path, start_time, video_number) {
   fileConn<-file(output_path)
   writeLines(addr, fileConn)
   close(fileConn)
-
+  
+   
 }
-
-
-##Example Use
-
-#input_path = 'C:/Users/leal0/OneDrive/Desktop/Documents/St. Gallen/Process Mining Job/Parsing Logs/P21_prom.log'
-
-#output_path = 'C:/Users/leal0/OneDrive/Desktop/Documents/St. Gallen/Process Mining Job/Parsing Logs/output_P21.txt'
-
-#parse_prom(input_path, output_path, 291500, 19)
