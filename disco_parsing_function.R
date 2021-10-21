@@ -14,7 +14,7 @@ parse_disco <- function(input_path, output_path, start_time, video_title, standa
   #input_path <- path to disco log file.
   #output_path <- path to output location. File name will be 
   #start_time <- start time when user uses first widget (units = seconds * 1000)
-  #video_title <-title of video being encoded (without .mp4 extension)
+  #video_title <-title of video being encoded (with .mp4 extension)
   #standard_time_lag <- for disco start and end time are not available. A default duration is used in this case.
   
   ### Load Log: ###
@@ -62,7 +62,7 @@ parse_disco <- function(input_path, output_path, start_time, video_title, standa
   dfSubset = dfSubset[0:-1,] #Delete first view because that is when program is waiting for user to start.
   
   mydiff <- function(data, diff){
-    #Difference Function to differentiate times beween tasks
+    #Difference Function to differentiate times between tasks
     c(rep(0, diff), diff(data, lag = diff))
   }
   
@@ -123,13 +123,11 @@ parse_disco <- function(input_path, output_path, start_time, video_title, standa
   line5 <- '</Users>'  
   line6 <- '<CodeBook>'
   line7 <- '<Codes>'
-  #line8 <- '<Code isCodable="true" name="Start and End Plugin" color="#2364a2" guid="plugin"/>'
   line8 <- paste(unlist(List1), collapse='', sep = '\n')
   line9 <- '</Codes>'
   line10 <- '</CodeBook>'
   line11 <- '<Sources>'
   line12 <- glue('<VideoSource name="{video_title}" creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" path="internal://{video_title}" guid="46ACDB89-832F-4998-A542-D579FCBE8F1F">')
-  #line13 <- '<VideoSelection end="{dfSubset$Time_Stamps[i+1]}" name="({dfSubset$Time_Stamps[i]},0),({dfSubset$Time_Stamps[i+1]},0)" creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" begin="{dfSubset$Time_Stamps[i]}" guid="5FB6E502-B2A2-459C-B8F7-C3E17A3A2F87"> <Coding creatingUser="2C5846FE-C0B7-4124-9256-794A5742CEBA" guid="E9CABA1A-0832-47CE-BD66-A8EC188D37FD"> <CodeRef targetGUID="plugin"/> </Coding> </VideoSelection>'
   line13 <- paste(unlist(List2), collapse='', sep = '/n')
   line14 <- '</VideoSource>'
   line15 <- '</Sources>'
