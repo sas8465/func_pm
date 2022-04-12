@@ -25,5 +25,3 @@ Procedure for use:
 
 5. Open Project Folder in MAXQDA. 
 
-YouTube Tutorial:
-
